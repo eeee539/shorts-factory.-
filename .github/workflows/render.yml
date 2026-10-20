@@ -1,0 +1,42 @@
+
+name: Render Short
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    env:
+      FPS: '30'
+      W: '1080'
+      H: '1920'
+      DURATION: '18'
+      UPLOAD_TO_YOUTUBE: 'false'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          pip install -r requirements.txt
+
+      - name: Generate video with voice
+        run: python run_all.py
+
+      - name: Save result
+        uses: actions/upload-artifact@v4
+        with:
+          name: short-preview
+          path: output/
+          if-no-files-found: error
