@@ -14,6 +14,14 @@ W=int(os.getenv('W','1080'))
 H=int(os.getenv('H','1920'))
 FPS=int(os.getenv('FPS','30'))
 DURATION=int(os.getenv('DURATION','18'))
+voicefile = Path('output/voice.mp3')
+if voicefile.exists():
+    try:
+        probe = subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', str(voicefile)], text=True)
+        DURATION = max(18, math.ceil(float(probe.strip())))
+    except Exception as exc:
+        print('Audio duration probe failed:', exc)
+
 OUT=Path('output'); OUT.mkdir(exist_ok=True)
 FONT='/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
 REG='/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
@@ -210,10 +218,12 @@ def map_scene(t):
     return im
 
 def render(t):
-    if t<4: return phone_scene(t)
-    if t<9: return street_scene(t-4)
-    if t<14: return building_scene(t-9)
-    return map_scene(t-14)
+    # Split the narration duration between four animated sequences.
+    scene_len = DURATION / 4
+    if t < scene_len: return phone_scene(t * 4 / scene_len)
+    if t < 2*scene_len: return street_scene((t-scene_len) * 5 / scene_len)
+    if t < 3*scene_len: return building_scene((t-2*scene_len) * 5 / scene_len)
+    return map_scene((t-3*scene_len) * 4 / scene_len)
 
 def main():
     cmd=['ffmpeg','-hide_banner','-loglevel','error','-y','-f','rawvideo','-pixel_format','rgb24','-video_size',f'{W}x{H}','-framerate',str(FPS),'-i','-','-c:v','libx264','-preset','veryfast','-crf','19','-pix_fmt','yuv420p','-movflags','+faststart',str(OUT/'video.mp4')]
